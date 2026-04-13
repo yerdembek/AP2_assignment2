@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/yerdembek/AP2_assignment2/generated/payment";
+
+import "google/protobuf/timestamp.proto";
+
+// PaymentService handles payment processing between Order and Payment services.
+service PaymentService {
+  rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);
+}
+
+message PaymentRequest {
+  string order_id = 1;
+  double amount   = 2;
+  string currency = 3;
+  string user_id  = 4;
+}
+
+message PaymentResponse {
+  string                    payment_id    = 1;
+  string                    status        = 2;  // "SUCCESS" | "FAILED" | "PENDING"
+  google.protobuf.Timestamp processed_at  = 3;
+  string                    message       = 4;
+}

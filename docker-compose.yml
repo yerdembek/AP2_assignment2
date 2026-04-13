@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  postgres-orders:
+    image: postgres:16-alpine
+    container_name: orders_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: orders_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - orders_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-payments:
+    image: postgres:16-alpine
+    container_name: payments_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: payments_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - payments_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  payment-service:
+    build:
+      # Изменено: контекст теперь в корне проекта, чтобы Docker видел папку /generated
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_name: payment_service
+    environment:
+      GRPC_PORT: "50051"
+      DB_HOST: postgres-payments
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: payments_db
+      DB_SSLMODE: disable
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres-payments:
+        condition: service_healthy
+
+  order-service:
+    build:
+      # Изменено: контекст теперь в корне проекта, чтобы Docker видел папку /generated
+      context: .
+      dockerfile: order-service/Dockerfile
+    container_name: order_service
+    environment:
+      HTTP_PORT: "8080"
+      GRPC_PORT: "50052"
+      PAYMENT_SERVICE_ADDR: payment-service:50051
+      DB_HOST: postgres-orders
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: orders_db
+      DB_SSLMODE: disable
+    ports:
+      - "8080:8080"
+      - "50052:50052"
+    depends_on:
+      postgres-orders:
+        condition: service_healthy
+      payment-service:
+        condition: service_started
+
+volumes:
+  orders_data:
+  payments_data:

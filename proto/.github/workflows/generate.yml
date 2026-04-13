@@ -1,0 +1,64 @@
+name: Generate Protobuf Code
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'proto/**/*.proto' # Путь изменен под твою структуру
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout proto repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '27.0'
+
+      - name: Install protoc-gen-go and protoc-gen-go-grpc
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
+
+      - name: Generate Go code
+        run: |
+          mkdir -p gen/payment gen/order
+          # Изменено: --proto_path=proto указывает на корень с proto-файлами
+          # Пути к файлам теперь указываются относительно папки proto
+          protoc \
+            --proto_path=proto \
+            --go_out=gen \
+            --go_opt=paths=source_relative \
+            --go-grpc_out=gen \
+            --go-grpc_opt=paths=source_relative \
+            payment/payment.proto order/order.proto
+
+      - name: Push to generated repository
+        env:
+          GH_TOKEN: ${{ secrets.GENERATED_REPO_TOKEN }}
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Логика копирования остается прежней, так как gen создается во время работы workflow
+          git clone https://x-access-token:${GH_TOKEN}@github.com/RendersC/ap2-gen.git ap2-gen
+
+          mkdir -p ap2-gen/payment ap2-gen/order
+          cp gen/payment/*.go ap2-gen/payment/
+          cp gen/order/*.go   ap2-gen/order/
+
+          cd ap2-gen
+          git add .
+          git diff --cached --quiet && echo "No changes to push" && exit 0
+          git commit -m "chore: regenerate protobuf code [skip ci]"
+          git push https://x-access-token:${GH_TOKEN}@github.com/RendersC/ap2-gen.git main

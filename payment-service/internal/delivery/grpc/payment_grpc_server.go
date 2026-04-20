@@ -26,6 +26,21 @@ func NewPaymentGRPCServer(uc *usecase.PaymentUseCase) *PaymentGRPCServer {
 	return &PaymentGRPCServer{useCase: uc}
 }
 
+func (s *PaymentGRPCServer) GetPaymentStats(ctx context.Context, req *pb.GetPaymentStatsRequest) (*pb.PaymentStats, error) {
+	total, auth, decl, sum, err := s.useCase.GetPaymentStats(ctx)
+	if err != nil {
+		log.Printf("GetPaymentStats error: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to fetch stats: %v", err)
+	}
+
+	return &pb.PaymentStats{
+		TotalCount:      total,
+		AuthorizedCount: auth,
+		DeclinedCount:   decl,
+		TotalAmount:     sum,
+	}, nil
+}
+
 // ProcessPayment handles an incoming gRPC ProcessPayment RPC call.
 func (s *PaymentGRPCServer) ProcessPayment(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
 	log.Printf("ProcessPayment called for order_id=%s amount=%.2f %s", req.OrderId, req.Amount, req.Currency)

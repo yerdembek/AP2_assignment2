@@ -1,7 +1,3 @@
-// client-cli is a test CLI that subscribes to order status updates via gRPC streaming.
-// Usage:
-//
-//	go run main.go -addr localhost:50052 -order <order_id>
 package main
 
 import (
@@ -13,7 +9,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	// Исправлен путь к сгенерированному коду заказов
 	pb "github.com/yerdembek/AP2_assignment2/generated/order"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

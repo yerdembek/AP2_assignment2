@@ -74,3 +74,19 @@ func NewPostgresDB(dsn string) (*sql.DB, error) {
 	}
 	return db, nil
 }
+
+func (r *PaymentRepository) GetStats(ctx context.Context) (total, auth, decl int64, sumCents int64, err error) {
+	query := `
+		SELECT 
+			COUNT(*),
+			COUNT(*) FILTER (WHERE status = 'SUCCESS'),
+			COUNT(*) FILTER (WHERE status = 'FAILED'),
+			COALESCE(SUM(amount * 100), 0)::BIGINT
+		FROM payments`
+
+	err = r.db.QueryRowContext(ctx, query).Scan(&total, &auth, &decl, &sumCents)
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("query stats: %w", err)
+	}
+	return total, auth, decl, sumCents, nil
+}

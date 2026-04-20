@@ -9,6 +9,17 @@ import "google/protobuf/timestamp.proto";
 // PaymentService handles payment processing between Order and Payment services.
 service PaymentService {
   rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);
+  // Новый метод для получения статистики
+  rpc GetPaymentStats(GetPaymentStatsRequest) returns (PaymentStats);
+}
+
+message GetPaymentStatsRequest {}
+
+message PaymentStats {
+  int64 total_count      = 1;
+  int64 authorized_count = 2;
+  int64 declined_count   = 3;
+  int64 total_amount     = 4; // сумма всех amount в cents
 }
 
 message PaymentRequest {
